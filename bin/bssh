@@ -1,0 +1,87 @@
+#!/usr/bin/perl
+# this script wrote on perl. it get file called NODES with IP of servers
+# and execude SSH command. the command running in with fork.
+#
+# Created by Meir Michanie, meirm @ riunx.com
+# date      : 03/04/2006
+#
+# Version 2011.01
+#
+=head1 Wed Jul 13 2011 C<bssh>
+ 
+ BSSH:
+
+ This suite allows you to run multiple processes across the network.
+
+=head1 Nodes file format:
+
+ localhost:all
+ 192.168.4.100:wawa,all
+ 192.168.4.101:wawa,all
+
+=head1 Usage:
+
+ bssh [--sshoptions [options]] @<group> ... [@<group>] -ls	# list all nodes in groups
+ bssh [--sshoptions [options]] @<group> <command>	# execute command on all nodes of group <group>
+ bssh [--sshoptions [options]] <host>: [<host>:] <command>	# execute command on specific node
+ bssh [--sshoptions [options]] @<group> -<host>: <command>	# execute command on group besides specific node
+
+=over 2
+
+=item *
+
+=item *
+
+
+=cut
+use strict;
+use FindBin;
+use lib ("$FindBin::Bin/../lib");
+use bcommon;
+&help if @ARGV and $ARGV[0]=~ m/^-h$|^--help$/;
+&help unless @ARGV;
+&binit if @ARGV and $ARGV[0]=~ m/^-i$|^--init$/;
+
+$|++;
+my @SSHPARAMS=&readsshparamsfile();
+
+my $dryrun=0;
+if (@ARGV and $ARGV[0]=~/--dry-run/){
+        shift @ARGV;
+	$dryrun=1;
+}
+if (@ARGV and $ARGV[0]=~/--sshoptions/){
+        shift @ARGV;
+        push (@SSHPARAMS, split (/\s+/ , shift @ARGV)) if @ARGV;
+}
+
+my @NODES = &fetchnodes();
+&list(@NODES) if $ARGV[0]=~/-ls/;
+sub help(){
+        print "Usage:\n";
+        print "$0 <command> [argument1]...[argument2]\n";
+        exit 0;
+}
+
+my @CHILD;
+foreach(@NODES){
+		chomp ;
+		my $host=$_;
+		my $chpid=fork();
+		unless ($chpid){ #child
+			if ($dryrun){
+				print STDERR "ssh ". join (" ",@SSHPARAMS)  . " $host ". join (" ",@ARGV)  , "\n";
+			}else{
+				open (BSSH, "ssh ". join (" ",@SSHPARAMS)  . " $host ". join (" ",@ARGV) . "|") || print "$host: bssh failed\n" && exit 1 ;
+				while (<BSSH>){
+					print "$host: $_";
+				}
+				close (BSSH);
+				exit 0;
+			}
+		}else{ # parent
+			push @CHILD, $chpid;
+		}
+}
+&waitbchild(@CHILD); 
+exit 0;

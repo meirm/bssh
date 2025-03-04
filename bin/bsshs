@@ -1,0 +1,53 @@
+#!/usr/bin/perl
+# this script wrote on perl. it get file called NODES with IP of servers
+# and execude SSH command. the command running in with fork.
+#
+# Created by Meir Michanie, meirm @ riunx.com
+# date      : 03/04/2006
+#
+use strict;
+use warnings;
+use FindBin;
+use lib ("$FindBin::Bin/../lib");
+use bcommon;
+&help if @ARGV and $ARGV[0]=~ m/^-h$|^--help$/;
+&help unless @ARGV;
+&binit if @ARGV and $ARGV[0]=~ m/^-i$|^--init$/;
+
+
+my @SSHPARAMS=&readsshparamsfile();
+my $dryrun=0;
+if (@ARGV and $ARGV[0]=~/--dry-run/){
+        shift @ARGV;
+	$dryrun=1;
+}
+if (@ARGV and $ARGV[0]=~/--sshoptions/){
+        shift @ARGV;
+        push (@SSHPARAMS, split (/\s+/ , shift @ARGV)) if @ARGV;
+}
+
+
+$|++;
+
+my @NODES = &fetchnodes();
+&list(@NODES) if $ARGV[0]=~/-ls/;
+my @cmd=("ssh");
+push @cmd,@SSHPARAMS if @SSHPARAMS;
+foreach(@NODES){
+		chomp ;
+		my $host=$_;
+		print "<$host>\n";
+		if ($dryrun){
+			print STDERR  join (" ",@cmd,$host,@ARGV), "\n";
+		}else{
+			system (@cmd,$host,@ARGV);
+		}
+		print "</$host>\n";
+}
+exit 0;
+
+sub help(){
+        print "Usage:\n";
+        print "$0 <command> [argument1]...[argument2]\n";
+        exit 0;
+}

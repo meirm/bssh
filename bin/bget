@@ -1,0 +1,66 @@
+#!/usr/bin/perl
+# this script wrote on perl. it get file called NODES with IP of servers
+# and execude SSH command. the command running in with fork.
+#
+# Created by Meir Michanie, meirm @ riunx.com
+# date      : 03/04/2006
+#
+use strict;
+use FindBin;
+use lib ("$FindBin::Bin/../lib");
+use bcommon;
+&help unless @ARGV;
+$|++;
+
+my @SSHPARAMS=&readsshparamsfile();
+my $dryrun=0;
+if (@ARGV and $ARGV[0]=~/--dry-run/){
+        shift @ARGV;
+        $dryrun=1;
+}
+
+if (@ARGV and $ARGV[0]=~/--sshoptions/){
+        shift @ARGV;
+        push (@SSHPARAMS, split (/\s+/ , shift @ARGV)) if @ARGV;
+}
+
+
+my @NODES = &fetchnodes();
+&list(@NODES) if $ARGV[0]=~/-ls/;
+
+
+sub help(){ 
+	print "Usage:\n";
+	print "$0 <source-file> [destination-file]\n";
+	print "i.e.\n";
+	print "# $0 /etc/fstab /tmp/\n";
+	print "scp server1:/etc/fstab /tmp/fstab\n";
+	print ".\n.\n.\n";
+	print "scp serverN:/etc/fstab /tmp/fstab\n";
+	exit 0;
+}
+	 
+
+my ($srcfile,$dstfile);
+$srcfile= shift @ARGV;
+$dstfile=$srcfile;
+$dstfile=~ s#.*/##g;
+$dstfile=@ARGV ? shift @ARGV : $dstfile;
+my @CHILD;
+foreach(@NODES){
+		chomp ;
+		my $cmd= "scp " . join (" ",@SSHPARAMS) . " $_:$srcfile $dstfile.$_"; 
+		print "<$_>$cmd</$_>\n";
+		if ($dryrun){
+			next;
+		}else{
+		my $chpid=fork();
+		unless ($chpid){ #child
+			exec("$cmd");
+		 }else{ # parent
+                        push @CHILD, $chpid;
+                }
+		}
+}
+&waitbchild(@CHILD);
+exit 0;

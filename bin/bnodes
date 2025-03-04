@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+# this script wrote on perl. it get file called NODES with IP of servers
+# and execude SSH command. the command running in with fork.
+#
+# Created by Meir Michanie, meirm @ riunx.com
+# date      : 03/04/2006
+#
+use strict;
+use warnings;
+use FindBin;
+use lib ("$FindBin::Bin/../lib");
+use bcommon;
+&help unless @ARGV;
+my @NODES = &fetchnodes();
+while(@ARGV){
+	$_=shift @ARGV;
+	&help if  m/^-h$|^--help$/;
+	&binit if m/^-i$|^--init$/;
+	&listnodes(@NODES) if m/^-n$|^--listnodes$/;
+	&listhosts(@NODES) if m/^--listhosts$/;
+	&list(@NODES) if m/-ls/;
+}
+# Add support for following functions:
+# listhosts
+# listnodes
+# addnode
+# removenode
+# addgroups
+# removegroups
+# setgroups
+
+sub help(){
+        print "Usage:\n";
+        print "$0 <command> [argument1]...[argument2]\n";
+        exit 0;
+}
+exit 0;
