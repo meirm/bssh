@@ -11,7 +11,16 @@ use FindBin;
 use lib ("$FindBin::Bin/../lib");
 use bcommon;
 &help unless @ARGV;
-my @NODES = &fetchnodes();
+my @NODES = ();
+if (@ARGV and $ARGV[0]=~/--nodes/){
+        shift @ARGV;
+        my $nodesfile = shift @ARGV;
+        @NODES = &fetchnodes($nodesfile);
+} else {
+        @NODES = &fetchnodes();
+}
+
+$|++;
 while(@ARGV){
 	$_=shift @ARGV;
 	&help if  m/^-h$|^--help$/;

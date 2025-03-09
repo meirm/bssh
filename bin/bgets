@@ -13,7 +13,7 @@ use lib ("$FindBin::Bin/../lib");
 use bcommon;
 
 &help unless @ARGV;
-$|++;
+
 
 my @SSHPARAMS=&readsshparamsfile();
 my $dryrun=0;
@@ -26,8 +26,18 @@ if (@ARGV and $ARGV[0]=~/--sshoptions/){
         push (@SSHPARAMS, split (/\s+/ , shift @ARGV)) if @ARGV;
 }
 
+my @NODES = ();
+if (@ARGV and $ARGV[0]=~/--nodes/){
+        shift @ARGV;
+        my $nodesfile = shift @ARGV;
+        @NODES = &fetchnodes($nodesfile);
+} else {
+        @NODES = &fetchnodes();
+}
 
-my @NODES = &fetchnodes();
+$|++;
+
+
 &list(@NODES) if $ARGV[0]=~/-ls/;
 
 

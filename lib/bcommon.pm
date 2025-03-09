@@ -42,7 +42,10 @@ sub readsshparamsfile{
 	return &readsimplecfgfile(qw(~/.bssh/sshparams /usr/local/bsshtools/etc/sshparams));
 }
 sub readnodesfile{
-	#return &readsimplecfgfile('~/.bssh/nodes /usr/local/bsshtools/etc/nodes');
+	my ($file) = @_;
+	if ($file){
+		return &readsimplecfgfile($file);
+	}
 	return &readsimplecfgfile(qw(~/.bssh/nodes /usr/local/bsshtools/etc/nodes));
 }
 sub list {
@@ -70,7 +73,13 @@ sub tolower {
 	return @array;
 }
 sub fetchnodes {
-	my @nodes=&readnodesfile();
+	my ($file) = @_;
+	my @nodes= ();
+	if ($file){
+		@nodes = &readnodesfile($file);
+	} else {
+		@nodes = &readnodesfile();
+	}
 	@nodes= &tolower(@nodes);
 	my @runnodes=();
 	my @noruns=();
