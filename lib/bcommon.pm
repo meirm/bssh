@@ -84,7 +84,7 @@ sub fetchnodes {
 	my @runnodes=();
 	my @noruns=();
 	my $targetdefined=0;
-	unshift(@ARGV,'@all') unless $ARGV[0]=~ m/^-?(\S+):/ or $ARGV[0]=~ m/^-?:([0-9]+)-([0-9]+)/ or $ARGV[0]=~ m/^-?@(\S+)/;
+	unshift(@ARGV,'@all') unless @ARGV and ($ARGV[0]=~ m/^-?(\S+):/ or $ARGV[0]=~ m/^-?:([0-9]+)-([0-9]+)/ or $ARGV[0]=~ m/^-?@(\S+)/);
 	while ( @ARGV and ($ARGV[0]=~ m/^-?(\S+):/ or $ARGV[0]=~ m/^-?:([0-9]+)-([0-9]+)/ or $ARGV[0]=~ m/^-?@(\S+)/)){ 
 		if($ARGV[0]=~ m/^:([0-9]+)-([0-9]+)/){
 			my ($start,$end)=($1,$2);
