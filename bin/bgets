@@ -7,29 +7,69 @@
 #
 use strict;
 use warnings;
-
 use FindBin;
 use lib ("$FindBin::Bin/../lib");
 use bcommon;
+use Getopt::Long qw(:config no_pass_through);
 
-&help unless @ARGV;
+# Manual argument processing to separate bsshs options from command
+my @bsshs_args;
+my @remote_cmd;
+my $cmd_section = 0;
 
-
-my @SSHPARAMS=&readsshparamsfile();
-my $dryrun=0;
-if (@ARGV and $ARGV[0]=~/--dry-run/){
-        shift @ARGV;
-	$dryrun=1;
+# Process each argument
+for (my $i = 0; $i < @ARGV; $i++) {
+    # If we see a --, everything after is command for remote host
+    if ($ARGV[$i] eq '--') {
+        $cmd_section = 1;
+        next;
+    }
+    
+    # If we're already in command section
+    if ($cmd_section ){
+        push @remote_cmd, $ARGV[$i];
+    } else {
+        push @bsshs_args, $ARGV[$i];
 }
-if (@ARGV and $ARGV[0]=~/--sshoptions/){
-        shift @ARGV;
-        push (@SSHPARAMS, split (/\s+/ , shift @ARGV)) if @ARGV;
 }
 
+# Replace ARGV with just the bsshs arguments for Getopt::Long
+@ARGV = @bsshs_args;
+
+# Define variables for options
+my $dryrun = 0;
+my $sshoptions = '';
+my $nodesfile = '';
+my $help = 0;
+my $init = 0;
+my $list = 0;
+
+# Parse only the tool's known options, not processing anything unrecognized
+GetOptions(
+    "dry-run" => \$dryrun,
+    "sshoptions=s" => \$sshoptions,
+    "nodes=s" => \$nodesfile,
+    "h|help" => \$help,
+    "i|init" => \$init,
+    "ls" => \$list
+);
+
+# Handle help option
+&help if $help;
+&help unless @remote_cmd or $list;
+
+# Handle init option
+&binit if $init;
+
+# Process SSH parameters
+my @SSHPARAMS = &readsshparamsfile();
+
+# Add any additional SSH options if provided
+push (@SSHPARAMS, split(/\s+/, $sshoptions)) if $sshoptions;
+
+# Fetch nodes from the specified file or default
 my @NODES = ();
-if (@ARGV and $ARGV[0]=~/--nodes/){
-        shift @ARGV;
-        my $nodesfile = shift @ARGV;
+if ($nodesfile) {
         @NODES = &fetchnodes($nodesfile);
 } else {
         @NODES = &fetchnodes();
@@ -37,27 +77,17 @@ if (@ARGV and $ARGV[0]=~/--nodes/){
 
 $|++;
 
-
-&list(@NODES) if $ARGV[0]=~/-ls/;
-
-
-sub help(){ 
-	print "Usage:\n";
-	print "$0 <source-file> [destination-file]\n";
-	print "i.e.\n";
-	print "# $0 /etc/fstab /tmp/\n";
-	print "scp server1:/etc/fstab /tmp/fstab\n";
-	print ".\n.\n.\n";
-	print "scp serverN:/etc/fstab /tmp/fstab\n";
+# List nodes if requested and exit
+if ($list) {
+    &list(@NODES);
 	exit 0;
 }
-	 
 
 my ($srcfile,$dstfile);
-$srcfile= shift @ARGV;
+$srcfile= shift @remote_cmd;
 $dstfile=$srcfile;
 $dstfile=~ s#.*/##g;
-$dstfile=@ARGV ? shift @ARGV : $dstfile;
+$dstfile=@remote_cmd ? shift @remote_cmd : $dstfile;
 
 foreach(@NODES){
 		chomp ;
@@ -71,3 +101,15 @@ foreach(@NODES){
 		print "</$_>\n";
 }
 exit 0;
+
+sub help() { 
+	print "Usage:\n";
+    print "$0 [--nodes <nodesfile>] [--dry-run] [--sshoptions \"options\"]  -- <source-file> [destination-file]\n";
+    print "Examples:\n";
+    print "# $0 -- /etc/fstab /tmp/\n";
+	print "scp /etc/fstab server1:/tmp\n";
+	print ".\n.\n.\n";
+	print "scp /etc/fstab serverN:/tmp\n";
+	exit 0;
+}
+	 

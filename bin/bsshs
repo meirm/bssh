@@ -10,7 +10,31 @@ use warnings;
 use FindBin;
 use lib ("$FindBin::Bin/../lib");
 use bcommon;
-use Getopt::Long qw(:config pass_through);  # Add pass_through to handle unrecognized options
+use Getopt::Long qw(:config no_pass_through);
+
+# Manual argument processing to separate bsshs options from command
+my @bsshs_args;
+my @remote_cmd;
+my $cmd_section = 0;
+
+# Process each argument
+for (my $i = 0; $i < @ARGV; $i++) {
+    # If we see a --, everything after is command for remote host
+    if ($ARGV[$i] eq '--') {
+        $cmd_section = 1;
+        next;
+    }
+    
+    # If we're already in command section
+    if ($cmd_section ){
+        push @remote_cmd, $ARGV[$i];
+    } else {
+        push @bsshs_args, $ARGV[$i];
+    }
+}
+
+# Replace ARGV with just the bsshs arguments for Getopt::Long
+@ARGV = @bsshs_args;
 
 # Define variables for options
 my $dryrun = 0;
@@ -20,7 +44,7 @@ my $help = 0;
 my $init = 0;
 my $list = 0;
 
-# Parse only the tool's known options, not processing anything unrecognized
+# Parse only the tool's known options
 GetOptions(
     "dry-run" => \$dryrun,
     "sshoptions=s" => \$sshoptions,
@@ -32,7 +56,7 @@ GetOptions(
 
 # Handle help option
 &help if $help;
-&help unless @ARGV or $list;
+&help unless @remote_cmd or $list;
 
 # Handle init option
 &binit if $init;
@@ -61,25 +85,30 @@ if ($list) {
 
 
 
-my @cmd=("ssh");
+my @cmd = ("ssh");
 push @cmd, @SSHPARAMS if @SSHPARAMS;
 
-foreach(@NODES){
-		chomp ;
-		my $host=$_;
-		print "<$host>\n";
-		if ($dryrun){
-			print STDERR  join (" ",@cmd,$host,@ARGV), "\n";
-		}else{
-			system (@cmd,$host,@ARGV);
-		}
-		print "</$host>\n";
+foreach my $host (@NODES) {
+    chomp $host;
+    print "<$host>\n";
+    
+    if ($dryrun) {
+        print STDERR join(" ", @cmd, $host, @remote_cmd), "\n";
+    } else {
+        system(@cmd, $host, @remote_cmd);
+    }
+    print "</$host>\n";
 }
 exit 0;
 
-sub help(){
+sub help() {
     print "Usage:\n";
-    print "$0 [--nodes <nodesfile>] [--dry-run] [--sshoptions \"options\"] <command> [args...]\n";
-    print "$0 [--nodes <nodesfile>] -ls    # List all available nodes\n";
+    print "$0 [bsshs options] [\@tag] [--] command [args...]\n";
+    print "Options:\n";
+    print "  --nodes <nodesfile>  Use alternative nodes file\n";
+    print "  --dry-run            Show commands without executing them\n";
+    print "  --sshoptions \"opts\"  Pass additional options to SSH\n";
+    print "  -ls                  List all available nodes\n";
+    print "  --                   Mark end of bsshs options\n";
     exit 0;
 }

@@ -35,10 +35,35 @@
 
 =cut
 use strict;
+use warnings;
 use FindBin;
 use lib ("$FindBin::Bin/../lib");
 use bcommon;
-use Getopt::Long qw(:config pass_through);  # Add pass_through to handle unrecognized options
+use Getopt::Long qw(:config no_pass_through);
+
+# Manual argument processing to separate bsshs options from command
+my @bsshs_args;
+my @remote_cmd;
+my $cmd_section = 0;
+
+# Process each argument
+for (my $i = 0; $i < @ARGV; $i++) {
+    # If we see a --, everything after is command for remote host
+    if ($ARGV[$i] eq '--') {
+        $cmd_section = 1;
+        next;
+    }
+    
+    # If we're already in command section
+    if ($cmd_section ){
+        push @remote_cmd, $ARGV[$i];
+    } else {
+        push @bsshs_args, $ARGV[$i];
+    }
+}
+
+# Replace ARGV with just the bsshs arguments for Getopt::Long
+@ARGV = @bsshs_args;
 
 # Define variables for options
 my $dryrun = 0;
@@ -48,7 +73,7 @@ my $help = 0;
 my $init = 0;
 my $list = 0;
 
-# Parse only the tool's known options, not processing anything unrecognized
+# Parse only the tool's known options
 GetOptions(
     "dry-run" => \$dryrun,
     "sshoptions=s" => \$sshoptions,
@@ -60,7 +85,7 @@ GetOptions(
 
 # Handle help option
 &help if $help;
-&help unless @ARGV or $list;
+&help unless @remote_cmd or $list;
 
 # Handle init option
 &binit if $init;
@@ -86,11 +111,7 @@ if ($list) {
     &list(@NODES);
     exit 0;
 }
-sub help(){
-        print "Usage:\n";
-        print "$0 <command> [argument1]...[argument2]\n";
-        exit 0;
-}
+
 
 my @CHILD;
 foreach(@NODES){
@@ -99,9 +120,9 @@ foreach(@NODES){
 		my $chpid=fork();
 		unless ($chpid){ #child
 			if ($dryrun){
-				print STDERR "ssh ". join (" ",@SSHPARAMS)  . " $host ". join (" ",@ARGV)  , "\n";
+				print STDERR "ssh ". join (" ",@SSHPARAMS)  . " $host ". join (" ",@remote_cmd)  , "\n";
 			}else{
-				open (BSSH, "ssh ". join (" ",@SSHPARAMS)  . " $host ". join (" ",@ARGV) . "|") || print "$host: bssh failed\n" && exit 1 ;
+				open (BSSH, "ssh ". join (" ",@SSHPARAMS)  . " $host ". join (" ",@remote_cmd) . "|") || print "$host: bssh failed\n" && exit 1 ;
 				while (<BSSH>){
 					print "$host: $_";
 				}
@@ -114,3 +135,15 @@ foreach(@NODES){
 }
 &waitbchild(@CHILD); 
 exit 0;
+
+sub help() {
+    print "Usage:\n";
+    print "$0 [bsshs options] [\@tag] [--] command [args...]\n";
+    print "Options:\n";
+    print "  --nodes <nodesfile>  Use alternative nodes file\n";
+    print "  --dry-run            Show commands without executing them\n";
+    print "  --sshoptions \"opts\"  Pass additional options to SSH\n";
+    print "  -ls                  List all available nodes\n";
+    print "  --                   Mark end of bsshs options\n";
+    exit 0;
+}
