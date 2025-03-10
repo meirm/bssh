@@ -31,6 +31,12 @@ sudo cp lib/bcommon.pm /usr/local/lib/  # Or another location in your @INC
 
 3. (Optional) Add the repository directory to your PATH instead of copying the scripts.
 
+## Important Usage Note
+
+All bssh tools now require the `--` divider to separate bssh options from the command to be executed on remote hosts. This applies to bssh, bsshs, bput, bputs, bget, and bgets.
+
+Example format:
+
 ## Setting Up Your Nodes File
 
 bssh expects a file called nodes in either `~/.bssh/` or `/usr/local/bsshtools/etc/`. To create a default nodes file, run:
@@ -90,7 +96,7 @@ By default, bssh looks for a nodes file in the installation directory. However, 
 To use your alternative nodes file with any bssh command, use the `--nodes` option:
 
 ```
-bsshs --nodes ~/.bssh/root_nodes command
+bsshs --nodes ~/.bssh/root_nodes -- command
 ```
 
 Examples:
@@ -102,12 +108,12 @@ Examples:
 
 2. Run a command on all servers matching a specific tag:
    ```
-   bsshs --nodes ~/.bssh/root_nodes @web uptime
+   bsshs --nodes ~/.bssh/root_nodes @web -- uptime
    ```
 
 3. Run a command on a specific server by index:
    ```
-   bsshs --nodes ~/.bssh/root_nodes 0 df -h
+   bsshs --nodes ~/.bssh/root_nodes 0 -- df -h
    ```
 
 ### Benefits
@@ -123,7 +129,7 @@ Examples:
 Run a command on all servers in the all group:
 
 ```
-bssh @all uname -a
+bssh @all -- uname -a
 ```
 
 ### Listing Nodes
@@ -139,19 +145,19 @@ bssh @all -ls
 Run a command on the first three nodes in your nodes file:
 
 ```
-bssh :0-2 uname -r
+bssh :0-2 -- uname -r
 ```
 
 Exclude a specific group:
 
 ```
-bssh @all -@wawa uptime
+bssh @all -@wawa -- uptime
 ```
 
 Run a command on a specific host:
 
 ```
-bssh 192.168.4.101: df -h
+bssh 192.168.4.101: -- df -h
 ```
 
 ### Adding SSH Options and Dry Run
@@ -159,13 +165,13 @@ bssh 192.168.4.101: df -h
 Specify custom SSH options:
 
 ```
-bssh --sshoptions "-i /path/to/key -p 2022" @all uptime
+bssh --sshoptions "-i /path/to/key -p 2022" @all -- uptime
 ```
 
 Perform a dry run (prints the commands without executing them):
 
 ```
-bssh --dry-run @all uname -n
+bssh --dry-run @all -- uname -n
 ```
 
 ### File Transfer with bput and bget
@@ -173,13 +179,13 @@ bssh --dry-run @all uname -n
 bput (parallel file copy to remote hosts):
 
 ```
-bput @all /etc/motd /tmp/
+bput @all -- /etc/motd /tmp/
 ```
 
 bget (parallel file copy from remote hosts):
 
 ```
-bget @all /etc/passwd ./backups/
+bget @all -- /etc/passwd ./backups/
 ```
 
 ### Sequential Versions
