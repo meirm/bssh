@@ -56,6 +56,66 @@ myserver1:dev,all
 myserver2:dev,all
 ```
 
+## Alternative Nodes File
+
+### Overview
+By default, bssh looks for a nodes file in the installation directory. However, you can now use an alternative nodes file located at `~/.bssh/root_nodes`. This allows you to maintain a personal list of servers without modifying the system-wide configuration.
+
+### Setting Up the Alternative Nodes File
+
+1. Create the directory if it doesn't exist:
+   ```
+   mkdir -p ~/.bssh
+   ```
+
+2. Create a `root_nodes` file in this directory:
+   ```
+   touch ~/.bssh/root_nodes
+   ```
+
+3. Add your server entries to the file in the following format:
+   ```
+   user@hostname:tag1,tag2,tag3
+   ```
+
+   Example:
+   ```
+   root@server1.example.com:web,prod,primary
+   root@server2.example.com:web,prod,secondary
+   admin@server3.example.com:db,prod
+   ```
+
+### Using the Alternative Nodes File
+
+To use your alternative nodes file with any bssh command, use the `--nodes` option:
+
+```
+bsshs --nodes ~/.bssh/root_nodes command
+```
+
+Examples:
+
+1. List all servers in your alternative nodes file:
+   ```
+   bsshs --nodes ~/.bssh/root_nodes -ls
+   ```
+
+2. Run a command on all servers matching a specific tag:
+   ```
+   bsshs --nodes ~/.bssh/root_nodes @web uptime
+   ```
+
+3. Run a command on a specific server by index:
+   ```
+   bsshs --nodes ~/.bssh/root_nodes 0 df -h
+   ```
+
+### Benefits
+
+- Maintain your personal server list without modifying system files
+- Keep different server lists for different projects
+- Share server lists with team members easily
+
 ## Usage
 
 ### Parallel SSH Commands
@@ -146,7 +206,7 @@ In parallel mode, each child process returns an exit code. Sequential scripts ha
 
 ## Conclusion
 
-bssh is a powerful toolkit for managing multiple servers with ease. Whether you’re deploying code, transferring files, or gathering logs, these tools help automate repetitive tasks with the simplicity and elegance of Unix command-line philosophy.
+bssh is a powerful toolkit for managing multiple servers with ease. Whether you're deploying code, transferring files, or gathering logs, these tools help automate repetitive tasks with the simplicity and elegance of Unix command-line philosophy.
 
 Feel free to explore the code and contribute to the project on GitHub.
 
