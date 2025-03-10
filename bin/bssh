@@ -38,34 +38,54 @@ use strict;
 use FindBin;
 use lib ("$FindBin::Bin/../lib");
 use bcommon;
-&help if @ARGV and $ARGV[0]=~ m/^-h$|^--help$/;
-&help unless @ARGV;
-&binit if @ARGV and $ARGV[0]=~ m/^-i$|^--init$/;
+use Getopt::Long qw(:config pass_through);  # Add pass_through to handle unrecognized options
 
-$|++;
-my @SSHPARAMS=&readsshparamsfile();
+# Define variables for options
+my $dryrun = 0;
+my $sshoptions = '';
+my $nodesfile = '';
+my $help = 0;
+my $init = 0;
+my $list = 0;
 
-my $dryrun=0;
-if (@ARGV and $ARGV[0]=~/--dry-run/){
-        shift @ARGV;
-	$dryrun=1;
-}
-if (@ARGV and $ARGV[0]=~/--sshoptions/){
-        shift @ARGV;
-        push (@SSHPARAMS, split (/\s+/ , shift @ARGV)) if @ARGV;
-}
+# Parse only the tool's known options, not processing anything unrecognized
+GetOptions(
+    "dry-run" => \$dryrun,
+    "sshoptions=s" => \$sshoptions,
+    "nodes=s" => \$nodesfile,
+    "h|help" => \$help,
+    "i|init" => \$init,
+    "ls" => \$list
+);
+
+# Handle help option
+&help if $help;
+&help unless @ARGV or $list;
+
+# Handle init option
+&binit if $init;
+
+# Process SSH parameters
+my @SSHPARAMS = &readsshparamsfile();
+
+# Add any additional SSH options if provided
+push (@SSHPARAMS, split(/\s+/, $sshoptions)) if $sshoptions;
+
+# Fetch nodes from the specified file or default
 my @NODES = ();
-if (@ARGV and $ARGV[0]=~/--nodes/){
-        shift @ARGV;
-        my $nodesfile = shift @ARGV;
-        @NODES = &fetchnodes($nodesfile);
+if ($nodesfile) {
+    @NODES = &fetchnodes($nodesfile);
 } else {
-        @NODES = &fetchnodes();
+    @NODES = &fetchnodes();
 }
 
 $|++;
 
-&list(@NODES) if $ARGV[0]=~/-ls/;
+# List nodes if requested and exit
+if ($list) {
+    &list(@NODES);
+    exit 0;
+}
 sub help(){
         print "Usage:\n";
         print "$0 <command> [argument1]...[argument2]\n";
